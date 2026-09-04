@@ -1,5 +1,5 @@
 <!--
-  ~ BaseClass("name") -> Module.name synthetic member support.
+  ~ Custom extensions for the BaseClass module type and the directory-scoped GUI editor.
   -->
 <idea-plugin>
     <extensions defaultExtensionNs="com.tang.intellij.lua">
@@ -8,5 +8,15 @@
                       order="first"/>
         <luaShortNamesManager implementation="com.tang.intellij.lua.module.BaseClassModuleShortNamesManager"
                               id="baseClassModule"/>
+    </extensions>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <projectService serviceImplementation="com.tang.intellij.lua.guieditor.GuiEditorProjectSettings"/>
+        <projectConfigurable id="preferences.EmmyLua.GuiEditor"
+                             parentId="language"
+                             displayName="EmmyLua GUI 编辑器"
+                             instance="com.tang.intellij.lua.guieditor.GuiEditorConfigurable"/>
+        <fileEditorProvider id="EmmyLua-GUI-Editor"
+                            implementation="com.tang.intellij.lua.guieditor.GuiEditorFileEditorProvider"/>
     </extensions>
 </idea-plugin>
