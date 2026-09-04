@@ -157,16 +157,25 @@ final class LuaGuiDesignerPanel extends JBPanel<LuaGuiDesignerPanel> implements 
     private JButton toolButton(String tooltip,ActionListener listener){String text=switch(tooltip){case "靠左"->"⇤";case "水平居中"->"↔";case "靠右"->"⇥";case "靠上"->"↥";case "垂直居中"->"↕";default->"↧";};JButton button=button(text,listener);button.setToolTipText(tooltip+"（相对父容器）");button.setMargin(JBUI.insets(2,7));return button;}
 
     private JComponent createWorkspace() {
-        JPanel left = new JPanel(new BorderLayout()); left.setBorder(JBUI.Borders.customLine(JBColor.border(), 0, 0, 0, 1));
-        JPanel layerHeader=new JPanel(new BorderLayout());layerHeader.setBorder(JBUI.Borders.empty(8,10,7,8));
+        Color sidebarBackground=new JBColor(new Color(0xF5F6F8),new Color(0x17191D));
+        JPanel left = new JPanel(new BorderLayout()); left.setBackground(sidebarBackground);left.setBorder(JBUI.Borders.customLine(JBColor.border(), 0, 0, 0, 1));
+        JPanel layerHeader=new JPanel(new BorderLayout());layerHeader.setBackground(sidebarBackground);layerHeader.setBorder(JBUI.Borders.empty(8,10,7,8));
         JBLabel layerTitle=new JBLabel("控件层级");layerTitle.setFont(layerTitle.getFont().deriveFont(Font.BOLD));layerCount.setForeground(JBColor.GRAY);layerHeader.add(layerTitle,BorderLayout.WEST);layerHeader.add(layerCount,BorderLayout.EAST);
         search.getEmptyText().setText("搜索名称或类型…");search.setBorder(JBUI.Borders.empty(5,8));
-        JPanel layerTop=new JPanel(new BorderLayout());layerTop.add(layerHeader,BorderLayout.NORTH);layerTop.add(search,BorderLayout.CENTER);
-        hierarchy.setCellRenderer(new WidgetTreeRenderer());hierarchy.setRowHeight(JBUI.scale(28));hierarchy.setRootVisible(false);hierarchy.setShowsRootHandles(true);hierarchy.setToggleClickCount(0);hierarchy.setLargeModel(true);hierarchy.setBorder(JBUI.Borders.empty(5,4,8,4));
-        left.add(layerTop, BorderLayout.NORTH); left.add(ScrollPaneFactory.createScrollPane(hierarchy, true), BorderLayout.CENTER);
+        JPanel layerTop=new JPanel(new BorderLayout());layerTop.setBackground(sidebarBackground);layerTop.add(layerHeader,BorderLayout.NORTH);layerTop.add(search,BorderLayout.CENTER);
+        hierarchy.setCellRenderer(new WidgetTreeRenderer());hierarchy.setBackground(sidebarBackground);hierarchy.setOpaque(true);hierarchy.setRowHeight(JBUI.scale(28));hierarchy.setRootVisible(false);hierarchy.setShowsRootHandles(true);hierarchy.setToggleClickCount(0);hierarchy.setLargeModel(true);hierarchy.setBorder(JBUI.Borders.empty(5,4,8,4));
+        JScrollPane hierarchyScroll=ScrollPaneFactory.createScrollPane(hierarchy,true);hierarchyScroll.setBackground(sidebarBackground);hierarchyScroll.getViewport().setBackground(sidebarBackground);
+        left.add(layerTop, BorderLayout.NORTH); left.add(hierarchyScroll, BorderLayout.CENTER);
         left.setMinimumSize(new Dimension(220, 100));
 
-        JScrollPane canvasScroll = ScrollPaneFactory.createScrollPane(canvas, true); canvasScroll.getViewport().setBackground(new JBColor(new Color(0xE9ECF2), new Color(0x17191D)));
+        JScrollPane canvasScroll = ScrollPaneFactory.createScrollPane(canvas, true);
+        JViewport canvasViewport=canvasScroll.getViewport();
+        canvasViewport.setBackground(new JBColor(new Color(0xE9ECF2), new Color(0x17191D)));
+        canvasViewport.setOpaque(true);
+        // BLIT_SCROLL_MODE reuses pixels from the previous viewport image. That is
+        // normally faster, but while the zoom slider continuously changes the view's
+        // preferred size it can copy stale canvas pixels and leave old frames behind.
+        canvasViewport.setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
         JPanel center = new JPanel(new BorderLayout()); center.add(canvasScroll, BorderLayout.CENTER);
 
         JPanel right = new JPanel(new BorderLayout()); right.setBorder(JBUI.Borders.customLine(JBColor.border(), 0, 1, 0, 0));
@@ -208,7 +217,7 @@ final class LuaGuiDesignerPanel extends JBPanel<LuaGuiDesignerPanel> implements 
         MouseAdapter treePopup=new MouseAdapter(){private void showPopup(MouseEvent e){if(!e.isPopupTrigger())return;TreePath path=hierarchy.getPathForLocation(e.getX(),e.getY());if(path==null)return;hierarchy.setSelectionPath(path);showWidgetContextMenu(hierarchy,e.getX(),e.getY());e.consume();}@Override public void mousePressed(MouseEvent e){showPopup(e);}@Override public void mouseReleased(MouseEvent e){showPopup(e);}};hierarchy.addMouseListener(treePopup);
         properties.getSelectionModel().addListSelectionListener((ListSelectionEvent e) -> {});
         gridToggle.addActionListener(e -> canvas.repaint());
-        zoom.addChangeListener(e -> { canvas.revalidate(); canvas.repaint(); });
+        zoom.addChangeListener(e -> canvas.zoomChanged());
         search.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void insertUpdate(javax.swing.event.DocumentEvent e) { rebuildTree(); }
             public void removeUpdate(javax.swing.event.DocumentEvent e) { rebuildTree(); }
@@ -401,7 +410,7 @@ final class LuaGuiDesignerPanel extends JBPanel<LuaGuiDesignerPanel> implements 
     private void duplicateWidget(LuaGuiDocument.Widget source){LuaGuiDocument.DuplicateResult copy=model.duplicateSubtree(workingText,source);int at=lineEndOffset(Math.min(lineCount()-1,copy.insertionLine()));replace(at,at,copy.block());reload();select(model.byVariable.get(copy.rootVariable()));status.setText("● 未保存  ·  已粘贴 "+copy.widgetCount()+" 个控件，仅根节点已重命名");}
     private void showWidgetContextMenu(Component owner,int x,int y){
         if(selected==null)return;JPopupMenu menu=new JPopupMenu();JMenuItem title=new JMenuItem(selected.displayName()+"  ·  "+selected.type);title.setEnabled(false);menu.add(title);menu.addSeparator();
-        JMenuItem copy=new JMenuItem("复制控件    Ctrl+C");copy.addActionListener(e->copySelected());menu.add(copy);JMenuItem paste=new JMenuItem("粘贴控件    Ctrl+V");paste.setEnabled(copiedWidgetId!=null);paste.addActionListener(e->pasteCopied());menu.add(paste);JMenuItem delete=new JMenuItem("删除控件    Delete");delete.addActionListener(e->deleteSelected());menu.add(delete);
+        JMenuItem delete=new JMenuItem("删除控件    Delete");delete.addActionListener(e->deleteSelected());menu.add(delete);
         Set<String> enabled=new LinkedHashSet<>(GuiEditorSettings.getInstance().getState().contextMenuPropertyKeys);String section=null;boolean added=false;
         for(GuiPropertySchema.Field field:GuiPropertySchema.forType(selected.type)){if(!enabled.contains(field.key())||field.valueType()==GuiPropertySchema.ValueType.READ_ONLY)continue;if(!Objects.equals(section,field.section())){menu.addSeparator();section=field.section();}addContextProperty(menu,field);added=true;}
         if(!added){menu.addSeparator();JMenuItem empty=new JMenuItem("未配置快捷属性");empty.setEnabled(false);menu.add(empty);}
@@ -650,6 +659,7 @@ final class LuaGuiDesignerPanel extends JBPanel<LuaGuiDesignerPanel> implements 
         static final int SCENE_WIDTH = 1136, SCENE_HEIGHT = 640;private static final int PAD = 80;
         private LuaGuiDocument.Widget dragging; private Point dragStart; private double startX,startY;
         private double dragPreviewX,dragPreviewY;private boolean dragPreviewActive;
+        private String clickThroughTargetId;
         private boolean spaceHeld,panning;
         private Point panStartScreen,panStartView;
 
@@ -661,16 +671,18 @@ final class LuaGuiDesignerPanel extends JBPanel<LuaGuiDesignerPanel> implements 
                     if(e.isPopupTrigger()){showPopup(e);return;}
                     if(SwingUtilities.isMiddleMouseButton(e)||(spaceHeld&&SwingUtilities.isLeftMouseButton(e))){startPan(e);return;}
                     if(!SwingUtilities.isLeftMouseButton(e))return;
-                    dragging=hit(e.getPoint());
+                    List<LuaGuiDocument.Widget> hits=hitStack(e.getPoint());dragging=hits.isEmpty()?null:hits.get(0);clickThroughTargetId=null;
                     if(dragging!=null){
+                        if(selected!=null&&selected.id.equals(dragging.id)&&hits.size()>1&&!e.isAltDown())clickThroughTargetId=hits.get(1).id;
                         select(dragging);beginEditGroup();
-                        if(e.isAltDown()){duplicateSelected();dragging=selected;}
+                        if(e.isAltDown()){clickThroughTargetId=null;duplicateSelected();dragging=selected;}
                         dragStart=e.getPoint();startX=dragging.x();startY=dragging.y();dragPreviewActive=false;
                     }
                 }
                 public void mouseDragged(MouseEvent e){
                     if(panning){panTo(e);return;}
                     if(dragging!=null){
+                        if(!dragPreviewActive&&dragStart.distance(e.getPoint())<JBUI.scale(3))return;clickThroughTargetId=null;
                         double z=zoom.getValue()/100.0,dx=(e.getX()-dragStart.x)/z,dy=-(e.getY()-dragStart.y)/z;
                         if(e.isShiftDown()){if(Math.abs(dx)>=Math.abs(dy))dy=0;else dx=0;}
                         double nx=startX+dx,ny=startY+dy;int step=GuiEditorSettings.getInstance().getState().gridSize;
@@ -681,7 +693,7 @@ final class LuaGuiDesignerPanel extends JBPanel<LuaGuiDesignerPanel> implements 
                 public void mouseReleased(MouseEvent e){
                     if(e.isPopupTrigger()){showPopup(e);return;}
                     if(panning){panning=false;setCursor(spaceHeld?Cursor.getPredefinedCursor(Cursor.HAND_CURSOR):Cursor.getDefaultCursor());}
-                    if(dragging!=null){boolean commit=dragPreviewActive;double x=dragPreviewX,y=dragPreviewY;dragPreviewActive=false;if(commit)updatePosition(x,y);dragging=null;endEditGroup();}
+                    if(dragging!=null){boolean commit=dragPreviewActive;double x=dragPreviewX,y=dragPreviewY;String through=commit?null:clickThroughTargetId;dragPreviewActive=false;clickThroughTargetId=null;if(commit)updatePosition(x,y);dragging=null;endEditGroup();if(through!=null){LuaGuiDocument.Widget target=model.byId.get(through);if(target!=null)select(target);}}
                 }
                 private void showPopup(MouseEvent e){LuaGuiDocument.Widget target=hit(e.getPoint());if(target!=null)select(target);if(selected!=null)showWidgetContextMenu(DesignerCanvas.this,e.getX(),e.getY());e.consume();}
             }; addMouseListener(mouse); addMouseMotionListener(mouse);
@@ -696,12 +708,12 @@ final class LuaGuiDesignerPanel extends JBPanel<LuaGuiDesignerPanel> implements 
 
         void setSpaceHeld(boolean held){spaceHeld=held;if(!panning)setCursor(held?Cursor.getPredefinedCursor(Cursor.HAND_CURSOR):Cursor.getDefaultCursor());}
         void cancelInteraction(){
-            if(dragging!=null&&groupingEdit&&groupStartText!=null){workingText=groupStartText;groupingEdit=false;groupStartText=null;dragging=null;dragPreviewActive=false;markDesignerDirty();reload();}
+            if(dragging!=null&&groupingEdit&&groupStartText!=null){workingText=groupStartText;groupingEdit=false;groupStartText=null;dragging=null;dragPreviewActive=false;clickThroughTargetId=null;markDesignerDirty();reload();}
             panning=false;setCursor(spaceHeld?Cursor.getPredefinedCursor(Cursor.HAND_CURSOR):Cursor.getDefaultCursor());
         }
         private void startPan(MouseEvent event){
             JViewport viewport=(JViewport)SwingUtilities.getAncestorOfClass(JViewport.class,this);if(viewport==null)return;
-            panning=true;dragging=null;panStartScreen=event.getLocationOnScreen();panStartView=viewport.getViewPosition();setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));event.consume();
+            panning=true;dragging=null;clickThroughTargetId=null;panStartScreen=event.getLocationOnScreen();panStartView=viewport.getViewPosition();setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));event.consume();
         }
         private void panTo(MouseEvent event){
             JViewport viewport=(JViewport)SwingUtilities.getAncestorOfClass(JViewport.class,this);if(viewport==null)return;
@@ -709,6 +721,18 @@ final class LuaGuiDesignerPanel extends JBPanel<LuaGuiDesignerPanel> implements 
         }
         private Point clampViewPosition(JViewport viewport,Point point){
             Dimension extent=viewport.getExtentSize(),view=getPreferredSize();return new Point(Math.max(0,Math.min(point.x,Math.max(0,view.width-extent.width))),Math.max(0,Math.min(point.y,Math.max(0,view.height-extent.height))));
+        }
+
+        private void zoomChanged(){
+            revalidate();
+            JViewport viewport=(JViewport)SwingUtilities.getAncestorOfClass(JViewport.class,this);
+            if(viewport!=null){
+                viewport.revalidate();
+                // After zooming out the newly vacated area belongs to the viewport,
+                // so repainting only the smaller canvas cannot erase its old pixels.
+                viewport.repaint();
+            }
+            repaint();
         }
 
         private void adjustZoomAt(MouseWheelEvent event){
@@ -756,6 +780,7 @@ final class LuaGuiDesignerPanel extends JBPanel<LuaGuiDesignerPanel> implements 
             List<LuaGuiDocument.Widget> order=renderOrder();
             for(LuaGuiDocument.Widget w:order)if(effectiveVisible(w)){Graphics2D widgetGraphics=(Graphics2D)g.create();applyAncestorClip(widgetGraphics,w);paintWidget(widgetGraphics,w);widgetGraphics.dispose();}
             for(LuaGuiDocument.Widget w:order)if(w.type.equals("ItemShow"))paintItemShowOverlay(g,w);
+            if(selected!=null&&effectiveVisible(selected))paintSelection(g,bounds(selected));
             g.setColor(new JBColor(new Color(0x777777),new Color(0x62656A)));g.drawRect(PAD,PAD,SCENE_WIDTH,SCENE_HEIGHT);g.dispose();
         }
 
@@ -776,7 +801,7 @@ final class LuaGuiDesignerPanel extends JBPanel<LuaGuiDesignerPanel> implements 
             if(image==null&&!w.texture().isBlank()&&!w.type.equals("TextAtlas")){item.setColor(new Color(255,90,90));item.setFont(item.getFont().deriveFont(11f));item.drawString("缺少资源: "+new File(w.texture()).getName(),r.x+4,r.y+Math.min(r.height-3,14));}
             if(image==null&&Set.of("Effect","FxEffect","ParticleEffect","SpineAnim","Spine38Anim","UIModel","EquipShow","ItemBox","CostItem").contains(w.type))paintAdvancedPlaceholder(item,w,r);
             item.dispose();
-            if(sel) paintSelection(g,r); else if(isContainer(w.type)){g.setColor(new Color(53,116,240,100));g.drawRect(r.x,r.y,r.width,r.height);}
+            if(!sel&&isContainer(w.type)){g.setColor(new Color(53,116,240,100));g.drawRect(r.x,r.y,r.width,r.height);}
         }
 
         private void paintText(Graphics2D g,LuaGuiDocument.Widget w,Rectangle r){
@@ -869,7 +894,8 @@ final class LuaGuiDesignerPanel extends JBPanel<LuaGuiDesignerPanel> implements 
         private boolean effectiveVisible(LuaGuiDocument.Widget widget){for(LuaGuiDocument.Widget at=widget;at!=null;at=at.parentWidget)if(!at.visible())return false;return true;}
         private double effectiveOpacity(LuaGuiDocument.Widget widget){double opacity=widget.opacity();for(LuaGuiDocument.Widget at=widget.parentWidget;at!=null;at=at.parentWidget)if(at.callBoolean("setChildrenCascadeOpacityEnabled",0,false))opacity*=at.opacity();return Math.max(0,Math.min(1,opacity));}
         private void applyAncestorClip(Graphics2D graphics,LuaGuiDocument.Widget widget){for(LuaGuiDocument.Widget at=widget.parentWidget;at!=null;at=at.parentWidget)if(at.clipsChildren())graphics.clip(bounds(at));}
-        private LuaGuiDocument.Widget hit(Point p){double z=zoom.getValue()/100.0;Point q=new Point((int)(p.x/z),(int)(p.y/z));List<LuaGuiDocument.Widget> ws=renderOrder();for(int i=ws.size()-1;i>=0;i--)if(effectiveVisible(ws.get(i))&&bounds(ws.get(i)).contains(q))return ws.get(i);return null;}
+        private List<LuaGuiDocument.Widget> hitStack(Point p){double z=zoom.getValue()/100.0;Point q=new Point((int)(p.x/z),(int)(p.y/z));List<LuaGuiDocument.Widget> result=new ArrayList<>(),ws=renderOrder();for(int i=ws.size()-1;i>=0;i--)if(effectiveVisible(ws.get(i))&&bounds(ws.get(i)).contains(q))result.add(ws.get(i));return result;}
+        private LuaGuiDocument.Widget hit(Point p){List<LuaGuiDocument.Widget> hits=hitStack(p);return hits.isEmpty()?null:hits.get(0);}
     }
 
     private BufferedImage loadImage(String texture){
