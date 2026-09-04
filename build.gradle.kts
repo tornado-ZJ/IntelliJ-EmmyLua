@@ -46,14 +46,14 @@ data class BuildData(
 
 val buildDataList = listOf(
     BuildData(
-        ideaSDKShortVersion = "2026.2",
-        ideaSDKVersion = "2026.2",
-        sinceBuild = "253",
+        ideaSDKShortVersion = "2023.3",
+        ideaSDKVersion = "2023.3.8",
+        sinceBuild = "233",
         untilBuild = "262.*",
         bunch = "212",
-        targetCompatibilityLevel = JavaVersion.VERSION_21,
-        buildJdkVersion = JavaVersion.VERSION_25,
-        jvmTarget = "21"
+        targetCompatibilityLevel = JavaVersion.VERSION_17,
+        buildJdkVersion = JavaVersion.VERSION_17,
+        jvmTarget = "17"
     )
 )
 
@@ -153,6 +153,7 @@ task("installEmmyDebugger", type = Copy::class) {
 
 project(":") {
     repositories {
+        maven("https://maven.aliyun.com/repository/public")
         mavenCentral()
         intellijPlatform {
             defaultRepositories()
@@ -167,8 +168,12 @@ project(":") {
         implementation("org.luaj:luaj-jse:3.0.1")
         implementation("com.jgoodies:forms:1.2.1")
         intellijPlatform {
-            intellijIdeaUltimate(buildVersionData.ideaSDKVersion)
-            bundledModule("intellij.spellchecker")
+            val localIdeaHome = providers.environmentVariable("IDEA_HOME").orNull
+            if (localIdeaHome.isNullOrBlank()) {
+                intellijIdeaUltimate(buildVersionData.ideaSDKVersion)
+            } else {
+                local(localIdeaHome)
+            }
         }
     }
 
@@ -222,7 +227,7 @@ project(":") {
 
     tasks {
         buildPlugin {
-            dependsOn("bunch", "installEmmyDebugger")
+            dependsOn("installEmmyDebugger")
             archiveBaseName.set(buildVersionData.archiveName)
             from(fileTree(resDir) { include("!!DONT_UNZIP_ME!!.txt") }) {
                 into("/${project.name}")

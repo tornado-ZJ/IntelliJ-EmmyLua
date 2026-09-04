@@ -67,11 +67,11 @@ public class LuaAppSettingsEditor extends SettingsEditor<LuaAppRunConfiguration>
         FileChooserDescriptor descriptor = FileChooserDescriptorFactory.createSingleFileNoJarsDescriptor()
                 .withTitle("Choose Program")
                 .withDescription("Choose program file");
-        myProgram.addBrowseFolderListener(project, descriptor);
+        myProgram.addBrowseFolderListener("Select Lua program", null, project, descriptor);
         descriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor()
                 .withTitle("Choose Working Dir")
                 .withDescription("Choose working dir");
-        myWorkingDir.addBrowseFolderListener(project, descriptor);
+        myWorkingDir.addBrowseFolderListener("Select working directory", null, project, descriptor);
 
         DebuggerType[] debuggerTypes = new DebuggerType[] { DebuggerType.Mob };
         /*if (SystemInfoRt.isWindows)

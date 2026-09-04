@@ -30,6 +30,14 @@ import com.tang.intellij.lua.lang.LuaLanguage
  * Created by tangzx on 2017/2/22.
  */
 class LuaCodeStyleSettingsProvider : CodeStyleSettingsProvider() {
+    /**
+     * Newer IntelliJ versions require code-style providers to expose a stable
+     * language identity instead of deriving a configurable id from a localized
+     * display name.  Returning Lua here also keeps the settings page id stable
+     * across IDE languages and prevents a PluginException during action indexing.
+     */
+    override fun getLanguage(): LuaLanguage = LuaLanguage.INSTANCE
+
     override fun createConfigurable(
         settings: CodeStyleSettings,
         modelSettings: CodeStyleSettings

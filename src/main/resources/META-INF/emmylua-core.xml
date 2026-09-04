@@ -149,6 +149,12 @@
 
         <!--lua settings-->
         <applicationService serviceImplementation="com.tang.intellij.lua.project.LuaSettings"/>
+        <applicationService serviceImplementation="com.tang.intellij.lua.guieditor.GuiEditorSettings"/>
+        <applicationConfigurable groupId="language"
+                                 id="com.tang.intellij.lua.guieditor.settings"
+                                 displayName="Lua GUI 设计器"
+                                 instance="com.tang.intellij.lua.guieditor.GuiEditorConfigurable"/>
+        <fileEditorProvider implementation="com.tang.intellij.lua.guieditor.LuaGuiFileEditorProvider"/>
         <applicationConfigurable groupId="language"
                                  displayName="EmmyLua"
                                  id="preferences.Lua"
@@ -344,6 +350,13 @@
                 text="EmmyDoc Tutorial"
                 id="lua.newTutorial">
             <add-to-group group-id="NewGroup" anchor="after" relative-to-action="lua.newFile"/>
+        </action>
+
+        <action class="com.tang.intellij.lua.guieditor.MarkGuiExportRootAction"
+                text="设为 GUIExport 路径"
+                id="lua.guiEditor.markRoot">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
 
     </actions>

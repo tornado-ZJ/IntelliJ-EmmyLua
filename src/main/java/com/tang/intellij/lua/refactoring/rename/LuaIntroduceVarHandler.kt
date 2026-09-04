@@ -112,7 +112,7 @@ class LuaIntroduceVarHandler : RefactoringActionHandler {
             if (inline) {
                 val targetToReplace = if (element is LuaCallExpr && element.parent is LuaExprStat) element.parent else element
                 localDef = targetToReplace.replace(localDef)
-                pointers.add(localDef.createSmartPointer())
+                pointers.add(SmartPointerManager.getInstance(operation.project).createSmartPsiElementPointer(localDef))
             } else {
                 val anchor = findAnchor(operation.occurrences)
                 commonParent = anchor?.parent
@@ -120,7 +120,7 @@ class LuaIntroduceVarHandler : RefactoringActionHandler {
                 commonParent.addAfter(LuaElementFactory.newLine(operation.project), localDef)
                 operation.occurrences.forEachIndexed { index, occ ->
                     val identifier = occ.replace(LuaElementFactory.createName(operation.project, operation.name))
-                    pointers.add(identifier.createSmartPointer())
+                    pointers.add(SmartPointerManager.getInstance(operation.project).createSmartPsiElementPointer(identifier))
                     if (occ == operation.element) {
                         positionIndex = index
                     }
