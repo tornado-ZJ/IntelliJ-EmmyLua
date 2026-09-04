@@ -1,80 +1,82 @@
-# 按目录接入 GUI 可视化编辑器
+# EmmyLua 原生 GUIExport 可视化编辑器
 
-本功能将 Windows GUI 编辑器接入 IntelliJ-EmmyLua 的文件编辑器体系，同时保持 Lua 语言解析、索引和补全由 EmmyLua 负责。
+本功能把 GUIExport Lua 文件的可视化编辑能力直接实现为 IntelliJ IDEA 的原生 `FileEditor` 页签。它不启动、嵌入或依赖任何外部 EXE。
 
-## 路由规则
+## 目录路由
 
 在项目设置中配置一个或多个目录后：
 
-- 目录内及其子目录中的 `.lua` 文件，会出现 `GUI 编辑器` 页；
-- `GUI 编辑器` 页排在普通 `Text` 页之前；
-- 普通 `Text` 页仍然存在，可查看和修改 Lua 源码；
-- 配置目录之外的 Lua 文件完全保持 EmmyLua 原来的打开方式；
-- 文件即使使用 GUI 编辑器打开，仍会进入 EmmyLua 的 PSI、Stub 和类型索引。
+- 匹配目录及其子目录内的 `.lua` 文件，默认打开 `GUI 设计器` 页签；
+- 同一文件仍保留普通 `Text` 页签，可随时查看和编辑原始 Lua；
+- 未匹配目录内的文件完全使用 EmmyLua 原来的文本编辑器；
+- 文件类型、PSI、Stub、索引、代码补全、跳转和检查仍由 EmmyLua 负责；
+- 目录匹配采用完整边界，`gui` 不会错误匹配 `gui-backup`；
+- 支持绝对路径、项目相对路径和 `$PROJECT_DIR$` 宏。
 
-因此，GUI 文件仍能使用项目中的函数、类型和 `Module/BaseClass` 补全，普通 Lua 文件也能引用 GUI 文件中的符号。
-
-## 配置
-
-打开：
+设置入口：
 
 ```text
 Settings / Preferences
 → Languages & Frameworks
-→ EmmyLua GUI 编辑器
+→ EmmyLua 原生 GUI 编辑器
 ```
 
-配置项：
+## IDEA 内嵌编辑器
 
-1. 启用或关闭目录路由；
-2. GUI 编辑器 EXE 的绝对路径；
-3. 打开匹配文件时是否自动启动工具；
-4. 一个或多个接管目录，支持 `$PROJECT_DIR$` 项目相对路径。
+匹配文件的 `GUI 设计器` 页包含：
 
-目录匹配采用完整目录边界。例如配置：
+- 左侧控件层级树；
+- 控件面板；
+- 中央原生 Swing 画布；
+- 右侧属性表和解析诊断；
+- 网格、吸附、缩放、保存、重新解析、撤销和重做；
+- 画布选择、拖动、调整尺寸、方向键微调和 Delete 删除；
+- 从控件面板拖到画布创建新控件；
+- 从 IDEA Project 视图或系统文件管理器把 `.lua` 文件拖到画布，直接在 IDEA 中打开目标文件。
 
-```text
-$PROJECT_DIR$/script/GUIExport
+## Lua 解析与保存策略
+
+第一版针对该工具使用的 GUIExport 代码形态进行静态解析，不执行 Lua：
+
+```lua
+local Button_1 = GUI:Button_Create(Scene, "Button_1", 100, 80, "res/button.png")
+GUI:setAnchorPoint(Button_1, 0.5, 0.5)
+GUI:setContentSize(Button_1, 180, 64)
 ```
 
-会匹配：
+支持常用 `GUI:*_Create` 和 setter，包括布局、节点、图片、按钮、文本、输入框、富文本、进度控件、复选框、滑杆、列表、滚动容器、分页、表格、物品、特效、序列帧、Spine 和 UIModel 等对象的基础属性。
 
-```text
-$PROJECT_DIR$/script/GUIExport/panel/main.lua
-```
+保存采用“最小改写”原则：
 
-不会误匹配：
+1. 未修改文件会逐字符原样返回；
+2. 只重写用户在设计器中修改过的已识别语句；
+3. 回调、条件、循环、动态表达式和未知 `GUI:` 调用原样保留；
+4. 新控件代码插入到 `ui.update(__data__)` 之前；
+5. 不执行项目 Lua，不加载项目代码，因此打开文件不会触发脚本副作用。
 
-```text
-$PROJECT_DIR$/script/GUIExportBackup/panel/main.lua
-```
+## 资源预览
 
-## 外部工具约束
+图片资源按以下位置查找：
 
-当前接入的工具是 Windows .NET Framework WPF 程序，通过以下命令行形式打开文件：
+1. 项目设置中的资源根目录；
+2. 当前 Lua 文件附近目录；
+3. 项目根目录；
+4. `GUIExport` 周边常见资源目录。
 
-```text
-GUI编辑器.exe "D:\项目\GUIExport\界面\main.lua"
-```
+找不到图片时，控件仍以占位框显示，其原始资源路径不会丢失。
 
-该工具自身会从文件路径中的 `GUIExport` 目录段推导资源根目录。因此，第一版要求被路由的实际文件路径中包含独立的 `GUIExport` 目录段，否则 IDEA 页会显示明确错误而不启动工具。
+## 当前范围
 
-建议将 EXE 放置在非系统盘，并确认它可以独立运行。工具关闭或保存后，插件会刷新对应 `VirtualFile`，普通 Text 页和 EmmyLua 索引随之更新。
+这一版已经是 IDEA 内部的原生可视化编辑器，不是外部窗口启动器。复杂运行时行为仍有以下边界：
 
-## 实现结构
+- 动态计算的控件名称、父节点或路径无法完全静态求值；
+- Spine、粒子、模型和某些专有特效先显示占位预览，但对应 Lua 参数会保留；
+- 未识别的专有 setter 不在属性表中显示，但会原样保存；
+- 修改目录路由后，已经打开的文件需要关闭并重新打开，以重新选择编辑器 Provider。
 
-- `GuiEditorProjectSettings`：保存项目级 EXE 路径和接管目录；
-- `GuiEditorPathMatcher`：无 PSI、无索引访问的快速路径匹配；
-- `GuiEditorFileEditorProvider`：只接受配置目录中的 `.lua` 文件；
-- `GuiEditorFileEditor`：启动和监控 WPF 编辑器进程，并刷新 VFS；
-- `GuiEditorConfigurable`：IDEA 项目设置页。
+## 构建信息
 
-编辑器 Provider 使用 `PLACE_BEFORE_DEFAULT_EDITOR`，所以只给匹配文件增加一个 GUI 页，不会替换 EmmyLua 的语言文件类型和解析器。
-
-## 当前边界
-
-- 仅 Windows 可启动上传的 EXE；其他系统自动退回普通 Text 编辑；
-- WPF 窗口作为独立进程显示，不通过 HWND 强制嵌入 IDEA；
-- 动态修改路由后，已经打开的文件需要关闭并重新打开；
-- 工具目前只接受路径中包含 `GUIExport` 的文件；
-- EXE 本体不提交到源码仓库，用户在设置中选择本机路径。
+- 基础版本：IntelliJ-EmmyLua `1.4.26.3`
+- 原生设计器版本：`1.4.26.5-IDEA2026.2`
+- IDEA 兼容范围：build `253` 至 `262.*`
+- Java 目标字节码：21
