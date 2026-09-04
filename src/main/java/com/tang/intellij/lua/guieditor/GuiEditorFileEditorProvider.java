@@ -17,12 +17,9 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * Adds a GUI-editor tab only for Lua files located below explicitly configured roots.
- * The standard EmmyLua text editor remains available as a second tab.
- */
+/** Routes only explicitly configured Lua directories to the native embedded designer. */
 public final class GuiEditorFileEditorProvider implements FileEditorProvider, DumbAware {
-    public static final String EDITOR_TYPE_ID = "EmmyLua-GUI-Editor";
+    public static final String EDITOR_TYPE_ID = "EmmyLua-Native-GUI-Editor";
 
     @Override
     public boolean accept(@NotNull Project project, @NotNull VirtualFile file) {
@@ -46,7 +43,7 @@ public final class GuiEditorFileEditorProvider implements FileEditorProvider, Du
 
     @Override
     public @NotNull FileEditorPolicy getPolicy() {
-        // GUI first, normal EmmyLua text editor kept as a safe fallback and for source editing.
+        // Native designer first; normal EmmyLua Text stays available for source-level edits and unsupported constructs.
         return FileEditorPolicy.PLACE_BEFORE_DEFAULT_EDITOR;
     }
 }
