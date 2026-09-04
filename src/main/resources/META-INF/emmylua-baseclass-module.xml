@@ -1,5 +1,6 @@
 <!--
-  ~ Custom extensions for the BaseClass module type and the directory-scoped GUI editor.
+  ~ Custom extensions for BaseClass -> Module inference and the IDEA-native GUIExport editor.
+  ~ No external GUI editor process is started.
   -->
 <idea-plugin>
     <extensions defaultExtensionNs="com.tang.intellij.lua">
@@ -14,9 +15,9 @@
         <projectService serviceImplementation="com.tang.intellij.lua.guieditor.GuiEditorProjectSettings"/>
         <projectConfigurable id="preferences.EmmyLua.GuiEditor"
                              parentId="language"
-                             displayName="EmmyLua GUI 编辑器"
+                             displayName="EmmyLua 原生 GUI 编辑器"
                              instance="com.tang.intellij.lua.guieditor.GuiEditorConfigurable"/>
-        <fileEditorProvider id="EmmyLua-GUI-Editor"
+        <fileEditorProvider id="EmmyLua-Native-GUI-Editor"
                             implementation="com.tang.intellij.lua.guieditor.GuiEditorFileEditorProvider"/>
     </extensions>
 </idea-plugin>
