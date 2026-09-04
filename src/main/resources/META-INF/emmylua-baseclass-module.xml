@@ -1,0 +1,12 @@
+<!--
+  ~ BaseClass("name") -> Module.name synthetic member support.
+  -->
+<idea-plugin>
+    <extensions defaultExtensionNs="com.tang.intellij.lua">
+        <luaTypeInfer implementation="com.tang.intellij.lua.module.BaseClassModuleShortNamesManager"
+                      id="baseClassModule"
+                      order="first"/>
+        <luaShortNamesManager implementation="com.tang.intellij.lua.module.BaseClassModuleShortNamesManager"
+                              id="baseClassModule"/>
+    </extensions>
+</idea-plugin>
