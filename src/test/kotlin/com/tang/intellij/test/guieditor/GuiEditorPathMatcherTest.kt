@@ -16,46 +16,68 @@ class GuiEditorPathMatcherTest : TestCase() {
     fun testRoutesOnlyDescendants() {
         assertTrue(
             GuiEditorPathMatcher.matchesPath(
-                "/project/script/GUIExport/panel/main.lua",
-                "/project/script/GUIExport",
+                "/project/script/gui/panel/main.lua",
+                "/project/script/gui",
                 "/project",
                 false
             )
         )
         assertFalse(
             GuiEditorPathMatcher.matchesPath(
-                "/project/script/GUIExport2/panel/main.lua",
-                "/project/script/GUIExport",
+                "/project/script/gui-backup/panel/main.lua",
+                "/project/script/gui",
                 "/project",
                 false
             )
         )
     }
 
-    fun testProjectMacro() {
+    fun testProjectMacroAndRelativePath() {
         assertTrue(
             GuiEditorPathMatcher.matchesPath(
-                "/project/script/GUIExport/panel/main.lua",
-                "\$PROJECT_DIR\$/script/GUIExport",
+                "/project/script/gui/panel/main.lua",
+                "\$PROJECT_DIR\$/script/gui",
+                "/project",
+                false
+            )
+        )
+        assertTrue(
+            GuiEditorPathMatcher.matchesPath(
+                "/project/script/gui/panel/main.lua",
+                "script/gui",
                 "/project",
                 false
             )
         )
     }
 
-    fun testWindowsPathsAreCaseInsensitive() {
+    fun testWindowsPathsAreCaseInsensitiveAndBoundarySafe() {
         assertTrue(
             GuiEditorPathMatcher.matchesPath(
-                "D:\\Game\\GUIExport\\Panel\\Main.lua",
-                "d:/game/guiexport",
+                "D:\\Game\\Gui\\Panel\\Main.lua",
+                "d:/game/gui",
+                null,
+                true
+            )
+        )
+        assertFalse(
+            GuiEditorPathMatcher.matchesPath(
+                "D:\\Game\\GuiOld\\Panel\\Main.lua",
+                "d:/game/gui",
                 null,
                 true
             )
         )
     }
 
-    fun testGuiExportSegmentDetection() {
-        assertTrue(GuiEditorPathMatcher.containsGuiExportSegment("D:/Game/GUIExport/Panel/Main.lua"))
-        assertFalse(GuiEditorPathMatcher.containsGuiExportSegment("D:/Game/GUIExportBackup/Panel/Main.lua"))
+    fun testDotSegmentsAreNormalized() {
+        assertTrue(
+            GuiEditorPathMatcher.matchesPath(
+                "/project/script/gui/panel/main.lua",
+                "/project/script/tmp/../gui/./",
+                "/project",
+                false
+            )
+        )
     }
 }
