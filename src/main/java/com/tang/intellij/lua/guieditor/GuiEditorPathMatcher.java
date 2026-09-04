@@ -87,19 +87,6 @@ public final class GuiEditorPathMatcher {
         return trimmed;
     }
 
-    /**
-     * The uploaded GUI editor currently derives its resource root from a path segment named GUIExport.
-     */
-    public static boolean containsGuiExportSegment(@NotNull String path) {
-        String normalized = normalize(path, null, true);
-        for (String part : normalized.split("/")) {
-            if ("GUIExport".equalsIgnoreCase(part)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public static @Nullable String findMatchingRoot(@NotNull Project project,
                                                     @NotNull VirtualFile file,
                                                     @NotNull GuiEditorProjectSettings settings) {
